@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<!-- jy1qnEpQ9gfAcA<R -->
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+
+    <!-- jQuery library -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+    <!-- Popper JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+
+    <!-- Latest compiled JavaScript -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <title>XO</title>
+</head>
+<style>
+    body {
+        background: #212121;
+        color: #666;
+    }
+
+    h1 {
+        text-align: center;
+        color: #fff;
+    }
+
+    .clearfix {
+        clear: both;
+    }
+
+    #box {
+        width: 510px;
+        margin-left: auto;
+        margin-right: auto;
+        overflow: auto;
+        margin-top: 40px;
+        /* background: #666; */
+        background: rgba(0, 128, 0, 0.5);
+        /* background: rgba(255, 0, 0, 0.5); */
+        padding-bottom: 40px;
+        border-radius: 10px;
+    }
+
+    .message {
+        background: #333;
+        color: #fff;
+    }
+
+    #gameBoard li {
+        float: left;
+        margin: 5px;
+        height: 70px;
+        width: 70px;
+        font-size: 50px;
+        background: #333;
+        color: #ccc;
+        list-style: none;
+        text-align: center;
+        border-radius: 2px;
+    }
+
+    #gameBoard li:hover,
+    #reset:hover {
+        cursor: pointer;
+        background: #000;
+    }
+
+    #reset {
+        border: 0;
+        background: #444;
+        color: #fff;
+        width: 70%;
+        padding: 15px;
+        border-radius: 5px;
+    }
+
+    #set {
+        width: 60px;
+        border: 2;
+        background: #444;
+        color: #fff;
+        padding: 5px;
+        border-radius: 5px;
+    }
+
+    footer {
+        display: block;
+        text-align: center;
+        padding-top: 20px;
+    }
+</style>
+
+<body>
+    <div class="text-center" id="box">
+        <header>
+            <h1>XO</h1>
+        </header>
+        <div class="message" id="message">
+            It's O's turn.
+        </div>
+        <div style="margin-top: 5px;">
+            <input id="input" type="number" min="3" value="3" style="width: 60px;">
+            <button onclick="process($('#input').val())" id="set">Reset</button>
+        </div>
+        <table id="gameBoard" style="margin-left: auto;margin-right: auto;">
+
+        </table>
+
+        <div class="clearfix"></div>
+        <footer>
+            <button id="history" data-toggle="modal" data-target="#myModal">History</button>
+        </footer>
+    </div>
+    <div class="modal" id="myModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+
+                <!-- Modal Header -->
+                <div class="modal-header">
+                    <h4 class="modal-title">History</h4>
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                </div>
+
+                <!-- Modal body -->
+                <div class="modal-body">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Result</th>
+                                <th>Game Size</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-body">
+
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Modal footer -->
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</body>
+<script>
+    $(document).ready(function () {
+        process(3)
+        $("#history").on('click', function () {
+            hitory()
+        })
+    })
+    async function hitory() {
+        var res = await get('http://localhost:3000/history')
+        $('#history-body').html('')
+        for (let index = 0; index < res.length; index++) {
+            var date = new Date(res[index].date)
+            $('#history-body').append(`<tr><td>${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()} ${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}</td><td>${res[index].result}</td><td>${res[index].size}X${res[index].size}</td></tr>`)
+
+        }
+        console.log(res)
+    }
+    function process(size) {
+        var game = true;
+        var userX = [];
+        var userO = [];
+        var xo = 'O';
+        $('#message').text(`ตาราง 5x5 ขึ้นไป กากติดกัน5ช่อง It's O's turn.`).css('color', 'white')
+        $(`#box`).css('background', 'rgba(0, 128, 0, 0.5)')
+        if (size < 3) {
+            size = 3
+            $('#message').text(`Min Size = 3  It's O's turn.`)
+        }
+        var px = size * 80 + 110
+        $('#box').css('width', `${px}px`)
+        var Size = size * size;
+        var turn = 0;
+        $('#gameBoard').empty()
+        var row = ''
+        for (let x = 1; x <= size; x++) {
+            row += '<tr>'
+            var col = ''
+            for (let y = 1; y <= size; y++) {
+                col += '<td>'
+                col += (`<li data-x="${x}" data-y="${y}" id="${x}-${y}">#</li></td>`)
+            }
+            row += col + '</tr>'
+
+        }
+        $('#gameBoard').append(row)
+        $("li").on('click', function () {
+
+            if ($(`#${this.id}`).text() == '#' && game == true) {
+                if (turn % 2 == 0) {    //o turn
+                    $(`#box`).css('background', 'rgba(255, 0, 0, 0.5)')
+                    $(`#${this.id}`).text('O').css('color', 'green')
+                    $('#message').text(`It's X's turn.`).css('color', 'red')
+                    xo = 'O'
+                    userO.push([$(`#${this.id}`).data('x'), $(`#${this.id}`).data('y')])
+                } else {    //x turn
+                    $(`#box`).css('background', 'rgba(0, 128, 0, 0.5)')
+                    $(`#${this.id}`).text('X').css('color', 'red')
+                    $('#message').text(`It's O's turn.`).css('color', 'green')
+                    xo = 'X'
+                    userX.push([$(`#${this.id}`).data('x'), $(`#${this.id}`).data('y')])
+                }
+                // console.log(userO)
+                // console.log(userX)
+                turn++;
+            }
+            //// Check
+            if (size == 3 && game == true) {
+                if ($(`#1-1`).text() == xo && $(`#1-2`).text() == xo && $(`#1-3`).text() == xo
+                    || $(`#1-1`).text() == xo && $(`#2-1`).text() == xo && $(`#3-1`).text() == xo
+                    || $(`#1-1`).text() == xo && $(`#2-2`).text() == xo && $(`#3-3`).text() == xo
+                    || $(`#1-2`).text() == xo && $(`#2-2`).text() == xo && $(`#3-2`).text() == xo
+                    || $(`#1-3`).text() == xo && $(`#2-3`).text() == xo && $(`#3-3`).text() == xo
+                    || $(`#1-3`).text() == xo && $(`#2-2`).text() == xo && $(`#3-1`).text() == xo
+                    || $(`#2-1`).text() == xo && $(`#2-2`).text() == xo && $(`#2-3`).text() == xo
+                    || $(`#3-1`).text() == xo && $(`#3-2`).text() == xo && $(`#3-3`).text() == xo) {
+                    post('http://localhost:3000/history', {
+                        user_o: userO,
+                        user_x: userX,
+                        result: xo + ' Win',
+                        size: size
+                    })
+                    $('#message').text(`${xo} ชนะ`)
+                    if (xo == 'O')
+                        $('#message').css('color', 'green')
+                    else
+                        $('#message').css('color', 'red')
+                    game = false
+                }
+            } else if (size == 4 && game == true) {
+                if ($(`#1-1`).text() == xo && $(`#1-2`).text() == xo && $(`#1-3`).text() == xo && $(`#1-4`).text() == xo
+                    || $(`#2-1`).text() == xo && $(`#2-2`).text() == xo && $(`#2-3`).text() == xo && $(`#2-4`).text() == xo
+                    || $(`#3-1`).text() == xo && $(`#3-2`).text() == xo && $(`#3-3`).text() == xo && $(`#3-4`).text() == xo
+                    || $(`#4-1`).text() == xo && $(`#4-2`).text() == xo && $(`#4-3`).text() == xo && $(`#4-4`).text() == xo
+                    || $(`#1-1`).text() == xo && $(`#2-1`).text() == xo && $(`#3-1`).text() == xo && $(`#4-1`).text() == xo
+                    || $(`#1-2`).text() == xo && $(`#2-2`).text() == xo && $(`#3-2`).text() == xo && $(`#4-2`).text() == xo
+                    || $(`#1-3`).text() == xo && $(`#2-3`).text() == xo && $(`#3-3`).text() == xo && $(`#4-3`).text() == xo
+                    || $(`#1-4`).text() == xo && $(`#2-4`).text() == xo && $(`#3-4`).text() == xo && $(`#4-4`).text() == xo
+                    || $(`#1-1`).text() == xo && $(`#2-2`).text() == xo && $(`#3-3`).text() == xo && $(`#4-4`).text() == xo
+                    || $(`#1-4`).text() == xo && $(`#2-3`).text() == xo && $(`#3-2`).text() == xo && $(`#4-1`).text() == xo) {
+                    post('http://localhost:3000/history', {
+                        user_o: userO,
+                        user_x: userX,
+                        result: xo + ' Win',
+                        size: size
+                    })
+                    $('#message').text(`${xo} ชนะ`).css()
+                    if (xo == 'O')
+                        $('#message').css('color', 'green')
+                    else
+                        $('#message').css('color', 'red')
+                    game = false
+                }
+            } else if (game == true) {
+                // console.log(userO)
+                // console.log(userX)
+                var equalsIgnoreOrder = (a, b) => {
+                    if (a.length !== b.length) return false;
+                    const uniqueValues = new Set([...a, ...b]);
+                    for (const v of uniqueValues) {
+                        const aCount = a.filter(e => e === v).length;
+                        const bCount = b.filter(e => e === v).length;
+                        if (aCount !== bCount) return false;
+                    }
+                    return true;
+                }
+                const equals = (a, b) =>
+                    a.length === b.length &&
+                    a.every((v, i) => v === b[i]);
+                var moc = [[1, 1], [2, 2], [3, 3], [4, 4], [5, 5]]
+                if (xo == 'X') {
+                    moc = userX
+                    // console.log('MOC_X:' + moc)
+                } else {
+                    moc = userO
+                    // console.log('MOC_O:' + moc)
+
+                }
+                var point
+                for (let index = 0; index < moc.length; index++) {
+                    var data_x
+                    var data_y
+                    var chk = moc[index]
+                    point = 1
+                    for (let index = 1; index < 5; index++) {
+                        data_x = chk[0] - index
+                        data_y = chk[1] + index
+                        if (data_x <= 0 || data_x > size || data_y <= 0 || data_y > size) break
+                        if (!equals(moc.filter((moc, index, array) => { return equals(moc, [data_x, data_y]) }), []))
+                            point++
+                        if (point >= 5) { break }
+                    }
+                    if (point >= 5) { break }
+                    point = 1
+                    for (let index = 1; index < 5; index++) {
+                        data_x = chk[0]
+                        data_y = chk[1] + index
+                        if (data_x <= 0 || data_x > size || data_y <= 0 || data_y > size) break
+                        if (!equals(moc.filter((moc, index, array) => { return equals(moc, [data_x, data_y]) }), []))
+                            point++
+                        if (point >= 5) { break }
+                    }
+                    if (point >= 5) { break }
+                    point = 1
+                    for (let index = 1; index < 5; index++) {
+                        data_x = chk[0] + index
+                        data_y = chk[1] + index
+                        if (data_x <= 0 || data_x > size || data_y <= 0 || data_y > size) break
+                        if (!equals(moc.filter((moc, index, array) => { return equals(moc, [data_x, data_y]) }), []))
+                            point++
+                        if (point >= 5) { break }
+                    }
+                    if (point >= 5) { break }
+                    point = 1
+                    for (let index = 1; index < 5; index++) {
+                        data_x = chk[0] + index
+                        data_y = chk[1]
+                        if (data_x <= 0 || data_x > size || data_y <= 0 || data_y > size) break
+                        if (!equals(moc.filter((moc, index, array) => { return equals(moc, [data_x, data_y]) }), []))
+                            point++
+                        if (point >= 5) { break }
+                    }
+                    if (point >= 5) { break }
+                }
+                if (point >= 5) {
+                    post('http://localhost:3000/history', {
+                        user_o: userO,
+                        user_x: userX,
+                        result: xo + ' Win',
+                        size: size
+                    })
+                    $('#message').text(`${xo} ชนะ`)
+                    if (xo == 'O')
+                        $('#message').css('color', 'green')
+                    else
+                        $('#message').css('color', 'red')
+                    game = false
+                }
+            }
+            if (turn == Size && game == true) {
+                post('http://localhost:3000/history', {
+                    user_o: userO,
+                    user_x: userX,
+                    result: 'Draw',
+                    size: size
+                })
+                $('#message').text('เสมอ คร๊าบ').css('color', 'yellow')
+            }
+
+        });
+    }
+    function get(URL) {
+        return new Promise((resolve, reject) => {
+            $.ajax({
+                url: URL,
+                method: "GET",
+                headers: {
+                    'Content-Type': 'application/json;charset=UTF-8',
+                    'accept': 'application/json, text/plain, */*'
+                }
+            }).fail((err) => {
+                reject(err);
+            }).done((res) => {
+                resolve(res);
+            })
+        });
+    }
+    function post(URL, data) {
+        return new Promise((resolve, reject) => {
+            $.ajax({
+                url: URL,
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json;charset=UTF-8'
+                },
+                data: JSON.stringify(data)
+            }).fail((err) => {
+                reject(err.responseText);
+
+            }).done((output, status, xhr) => {
+                resolve(output);
+            })
+        });
+    }
+</script>
+
+</html>
